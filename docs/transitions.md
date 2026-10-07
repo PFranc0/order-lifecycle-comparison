@@ -55,3 +55,8 @@ invalid combinations = 56 - 10 = 46
 
 The proof of concept compares how the C++ FSM and the Rust Typestate model
 handle these 46 invalid combinations.
+
+All 56 pairs are checked automatically: the C++ executable tests the runtime
+result and final state, while the Rust documentation tests check valid return
+types and compilation failures for invalid calls. See
+[results.md](results.md) for coverage and [README.md](../README.md) for commands.

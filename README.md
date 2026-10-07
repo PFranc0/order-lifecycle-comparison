@@ -53,6 +53,10 @@ In the Rust implementation, each state is represented by a distinct type. An
 `Order<Filled>` does not expose `request_cancel()`. These calls fail before the
 program can run, because the methods do not exist for those state types.
 
+The Rust API lives in `src/lib.rs`, while the example program and integration
+tests are separate consumers. The internal transition helper and state fields
+are private, so consumers cannot use them to bypass the permitted transitions.
+
 | Invalid transition | C++ FSM | Rust Typestate |
 |---|---|---|
 | FullFill on Created | Compiles; returns false at runtime | Does not compile |
@@ -61,28 +65,46 @@ program can run, because the methods do not exist for those state types.
 | Reject on Accepted | Compiles; returns false at runtime | Does not compile |
 | Submit on Rejected | Compiles; returns false at runtime | Does not compile |
 
-See [docs/results.md](docs/results.md) for examples of invalid Rust calls.
+See [docs/results.md](docs/results.md) for examples and automated test coverage.
+
+## Development Environment
+
+Open the repository in its devcontainer to use C++, CMake and Rust together.
+The Dockerfile supplies the C++ environment, and `devcontainer.json` adds Rust
+through the Rust feature. No third-party libraries are required by either model.
 
 ## Running The C++ FSM
 
 ```sh
-cmake -S cpp-fsm -B cpp-fsm/build
+cmake -S cpp-fsm -B cpp-fsm/build -DCMAKE_BUILD_TYPE=Debug
 cmake --build cpp-fsm/build
+ctest --test-dir cpp-fsm/build --output-on-failure
 ./cpp-fsm/build/cpp_fsm
 ```
 
 Expected output:
 
 ```text
+C++ FSM: 56 combinations checked (10 valid, 46 invalid).
 C++ FSM: all runtime validation tests passed.
 ```
+
+To verify the same checks in Release:
+
+```sh
+cmake -S cpp-fsm -B cpp-fsm/build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build cpp-fsm/build/release
+ctest --test-dir cpp-fsm/build/release --output-on-failure
+```
+
+Checks remain active with `NDEBUG`; a failed check produces a nonzero exit code.
 
 ## Running The Rust Typestate Model
 
 ```sh
-cd rust-typestate
-cargo test
-cargo run
+cargo test --manifest-path rust-typestate/Cargo.toml
+cargo test --manifest-path rust-typestate/Cargo.toml --release
+cargo run --manifest-path rust-typestate/Cargo.toml
 ```
 
 Expected runtime output:
@@ -90,3 +112,26 @@ Expected runtime output:
 ```text
 Rust Typestate: all valid flows compiled and ran.
 ```
+
+`cargo test` runs six integration tests and 59 documentation tests: the 56
+state/event combinations and three checks for private API access and ownership.
+Each of the 46 invalid combinations is a separate compile-fail test. The ten
+valid combinations check the destination type and order ID.
+
+## Reproducing the Article
+
+The source repository is
+[PFranc0/order-lifecycle-comparison](https://github.com/PFranc0/order-lifecycle-comparison).
+When citing the experiment, record the tested commit and tool versions:
+
+```sh
+git rev-parse HEAD
+c++ --version
+cmake --version
+rustc --version
+cargo --version
+```
+
+Run these commands in the same environment used for the tests. The devcontainer
+does not pin every compiler version, so its configuration alone does not identify
+the exact experimental environment.
